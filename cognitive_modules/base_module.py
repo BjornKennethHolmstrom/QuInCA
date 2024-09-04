@@ -1,19 +1,21 @@
 # cognitive_modules/base_module.py
 
+import logging
 from quantum_inspired_lib.efficient_quantum_nn import EfficientQuantumNeuralNetwork
-print = __import__('functools').partial(print, flush=True)
+from logger import setup_logger
 
 class BaseCognitiveModule:
     def __init__(self, input_shape, conv_params, dim_reduction_size, attention_size, layer_sizes):
-        print("Initializing BaseCognitiveModule")  # Debug print
+        self.logger = setup_logger(self.__class__.__name__, logging.DEBUG)
+        self.logger.info("Initializing BaseCognitiveModule")
         try:
-            print("Creating EfficientQuantumNeuralNetwork")  # Debug print
+            self.logger.debug("Creating EfficientQuantumNeuralNetwork")
             self.qnn = EfficientQuantumNeuralNetwork(input_shape, conv_params, dim_reduction_size, attention_size, layer_sizes)
-            print("EfficientQuantumNeuralNetwork created")  # Debug print
+            self.logger.debug("EfficientQuantumNeuralNetwork created")
         except Exception as e:
-            print(f"Error creating EfficientQuantumNeuralNetwork: {e}")  # Debug print
+            self.logger.error(f"Error creating EfficientQuantumNeuralNetwork: {e}", exc_info=True)
             raise
-        print("BaseCognitiveModule initialization complete")  # Debug print
+        self.logger.info("BaseCognitiveModule initialization complete")
     
     async def process(self, input_data):
         # This method should be overridden by subclasses

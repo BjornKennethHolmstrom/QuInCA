@@ -1,6 +1,6 @@
 import asyncio
-import time
 from typing import Callable, Dict, List, Optional
+from logger import setup_logger
 
 class Task:
     def __init__(self, coro: Callable, interval: Optional[float] = None, name: str = ""):
@@ -13,72 +13,72 @@ class Task:
 class RealTimeFramework:
     def __init__(self):
         self.tasks: Dict[str, Task] = {}
-        self.loop = asyncio.get_event_loop()
-        print("RealTimeFramework initialized")  # Debug print
+        self.logger = setup_logger('RealTimeFramework')
+        self.logger.debug("RealTimeFramework initialized")
 
     def add_task(self, coro: Callable, interval: Optional[float] = None, name: str = ""):
         task = Task(coro, interval, name)
         self.tasks[task.name] = task
-        print(f"Task added: {task.name}")  # Debug print
+        self.logger.debug(f"Task added: {task.name}")
 
     def remove_task(self, name: str):
         if name in self.tasks:
             del self.tasks[name]
-            print(f"Task removed: {name}")  # Debug print
+            self.logger.debug(f"Task removed: {name}")
 
     async def run_task(self, task: Task):
-        print(f"Attempting to run task: {task.name}")  # Debug print
+        self.logger.debug(f"Attempting to run task: {task.name}")
         while True:
             if not task.is_running:
                 task.is_running = True
                 try:
                     await task.coro()
-                    print(f"Task completed: {task.name}")  # Debug print
+                    self.logger.debug(f"Task completed: {task.name}")
                 except Exception as e:
-                    print(f"Error in task {task.name}: {e}")
+                    self.logger.error(f"Error in task {task.name}: {e}", exc_info=True)
                 finally:
                     task.is_running = False
-                    task.last_run = time.time()
+                    task.last_run = asyncio.get_event_loop().time()
             
             if task.interval is None:
-                print(f"One-time task {task.name} finished")  # Debug print
+                self.logger.debug(f"One-time task {task.name} finished")
                 break  # This is a one-time task
             
             # Wait for the next interval
-            await asyncio.sleep(max(0, task.interval - (time.time() - task.last_run)))
+            await asyncio.sleep(max(0, task.interval - (asyncio.get_event_loop().time() - task.last_run)))
 
     async def main_loop(self):
-        print("Entering main loop")  # Debug print
+        self.logger.debug("Entering main loop")
         while True:
             tasks = []
             for task in self.tasks.values():
-                if task.interval is None or time.time() - task.last_run >= task.interval:
+                if task.interval is None or asyncio.get_event_loop().time() - task.last_run >= task.interval:
                     if not task.is_running:
                         tasks.append(self.run_task(task))
             
             if tasks:
-                print(f"Running {len(tasks)} tasks")  # Debug print
+                self.logger.debug(f"Running {len(tasks)} tasks")
                 await asyncio.gather(*tasks)
             else:
                 await asyncio.sleep(0.1)  # Avoid busy-waiting
 
-    def run(self):
-        print("Starting framework run")  # Debug print
+    async def run(self):
+        self.logger.debug("Starting framework run")
         try:
-            self.loop.run_until_complete(self.main_loop())
-        except KeyboardInterrupt:
-            print("Keyboard interrupt received")
+            await self.main_loop()
+        except asyncio.CancelledError:
+            self.logger.info("Framework run cancelled")
         except Exception as e:
-            print(f"An error occurred in the framework: {e}")
+            self.logger.error(f"An error occurred in the framework: {e}", exc_info=True)
         finally:
-            print("Framework run complete")  # Debug print
+            self.logger.debug("Framework run complete")
 
 # Example usage
 async def periodic_task():
-    print(f"Periodic task running at {time.time()}")
+    print(f"Periodic task running at {asyncio.get_event_loop().time()}")
 
 async def one_time_task():
-    print(f"One-time task running at {time.time()}")
+    print(f"One-time task running at {asyncio.get_event_loop().time()}")
 
 if __name__ == "__main__":
     framework = RealTimeFramework()
@@ -90,7 +90,4 @@ if __name__ == "__main__":
     framework.add_task(one_time_task, name="one_time")
     
     # Run the framework
-    try:
-        framework.run()
-    except KeyboardInterrupt:
-        print("Shutting down...")
+    asyncio.run(framework.run())

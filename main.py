@@ -1,8 +1,6 @@
-# main.py
-
-import functools
-print = functools.partial(print, flush=True)
-
+import asyncio
+import logging
+from logger import setup_logger
 from input_system import InputSystem
 from cognitive_modules.perception import PerceptionModule
 from cognitive_modules.attention import AttentionModule
@@ -13,16 +11,18 @@ from real_time_framework import RealTimeFramework
 from visualization import TerminalVisualizer
 import numpy as np
 
-def main():
-    print("Starting main function")  # Debug print
+# Set up logger for main
+logger = setup_logger('main', logging.INFO)
+
+async def main():
+    logger.info("Starting main function")
 
     try:
-        print("Initializing InputSystem")  # Debug print
+        logger.info("Initializing InputSystem")
         input_system = InputSystem()
-        print("InputSystem initialized")  # Debug print
+        logger.info("InputSystem initialized")
 
         # Common configuration for all modules
-        #input_shape = (64, 36)  # Adjust based on your input
         input_size = 2485  # This is the size of your combined features
         conv_params = {'kernel_size': 3, 'num_filters': 16}
         dim_reduction_size = 128
@@ -30,41 +30,33 @@ def main():
         layer_sizes = [64, 32, 16, 8]
         memory_size = 100
 
-        print(f"Main configuration:")
-        print(f"  input_size: {input_size}")
-        print(f"  conv_params: {conv_params}")
-        print(f"  dim_reduction_size: {dim_reduction_size}")
-        print(f"  attention_size: {attention_size}")
-        print(f"  layer_sizes: {layer_sizes}")
-        print(f"  memory_size: {memory_size}")
+        logger.info(f"Main configuration: input_size={input_size}, conv_params={conv_params}, "
+                    f"dim_reduction_size={dim_reduction_size}, attention_size={attention_size}, "
+                    f"layer_sizes={layer_sizes}, memory_size={memory_size}")
 
-        print("Initializing cognitive modules")  # Debug print
+        logger.info("Initializing cognitive modules")
         perception = PerceptionModule(input_size, conv_params, dim_reduction_size, attention_size, layer_sizes)
-        print("Perception module initialized")  # Debug print
         attention = AttentionModule(layer_sizes[-1] + 50, conv_params, dim_reduction_size, attention_size, layer_sizes)
-        print("Attention module initialized")  # Debug print
         memory = MemoryModule(8 + 50 + memory_size, conv_params, dim_reduction_size, attention_size, layer_sizes, memory_size)
-        print("Memory module initialized")  # Debug print
         reasoning = ReasoningModule(16, conv_params, dim_reduction_size, attention_size, layer_sizes)
-        print("Reasoning module initialized")  # Debug print
         action_selection = ActionSelectionModule(layer_sizes[-1] + 50, conv_params, dim_reduction_size, attention_size, layer_sizes)
-        print("Cognitive modules initialized")  # Debug print
+        logger.info("Cognitive modules initialized")
 
-        print("Initializing TerminalVisualizer")  # Debug print
+        logger.info("Initializing TerminalVisualizer")
         visualizer = TerminalVisualizer()
-        print("TerminalVisualizer initialized")  # Debug print
+        logger.info("TerminalVisualizer initialized")
 
         # Placeholder for system state
         system_state = np.zeros(50)  # Adjust size as needed
 
         async def cognitive_cycle():
-            print("Starting cognitive cycle")
+            logger.debug("Starting cognitive cycle")
             try:
                 input_data = input_system.get_all_input_data()
                 
                 # Perception
                 perception_output = await perception.process(input_data)
-                print(f"Perception output shape: {perception_output.shape}")
+                logger.debug(f"Perception output shape: {perception_output.shape}")
                 
                 # Initialize system state if it doesn't exist
                 if 'system_state' not in globals():
@@ -73,43 +65,41 @@ def main():
                 
                 # Attention
                 attended_features, attention_weights = await attention.process(perception_output, system_state)
-                print(f"Attended features shape: {attended_features.shape}")
-                print(f"Attention weights shape: {attention_weights.shape}")
+                logger.debug(f"Attended features shape: {attended_features.shape}")
+                logger.debug(f"Attention weights shape: {attention_weights.shape}")
                 
                 # Memory
                 placeholder_reasoning_output = np.zeros((1, 50))  # Make it 2D
                 retrieved_memories = await memory.process(attended_features, placeholder_reasoning_output)
-                print(f"Retrieved memories shape: {retrieved_memories.shape}")
+                logger.debug(f"Retrieved memories shape: {retrieved_memories.shape}")
                 
                 # Reasoning
                 reasoning_output = await reasoning.process(attended_features, retrieved_memories)
-                print(f"Reasoning output shape: {reasoning_output.shape}")
+                logger.debug(f"Reasoning output shape: {reasoning_output.shape}")
                 
                 # Action Selection
                 selected_action = await action_selection.process(reasoning_output, system_state)
-                print(f"Selected action: {selected_action}")
+                logger.info(f"Selected action: {selected_action}")
                 
                 # Update system state (this is a placeholder, replace with actual state update logic)
                 system_state = np.random.rand(1, 50)  # Make it 2D
                 
-                print("Cognitive cycle completed")
+                logger.debug("Cognitive cycle completed")
             except Exception as e:
-                print(f"Error in cognitive_cycle: {e}")
-                import traceback
-                traceback.print_exc()
+                logger.error(f"Error in cognitive_cycle: {e}", exc_info=True)
 
-        print("Initializing RealTimeFramework")  # Debug print
+        logger.info("Initializing RealTimeFramework")
         framework = RealTimeFramework()
-        print("Adding cognitive_cycle task to framework")  # Debug print
+        logger.info("Adding cognitive_cycle task to framework")
         framework.add_task(cognitive_cycle, interval=0.5, name="cognitive_cycle")
 
-        print("Starting framework")  # Debug print
-        framework.run()
+        logger.info("Starting framework")
+        await framework.run()
 
     except Exception as e:
-        print(f"An error occurred in main: {e}")  # Debug print
+        logger.error(f"An error occurred in main: {e}", exc_info=True)
     finally:
-        print("Cleanup complete")  # Debug print
+        logger.info("Main function completed")
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
