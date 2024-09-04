@@ -46,14 +46,24 @@ class SystemVisualizer:
         self.fig.canvas.flush_events()
 
 class TerminalVisualizer:
-    def __init__(self, num_modules=5):
-        self.num_modules = num_modules
-        self.module_names = ["Perception", "Attention", "Memory", "Reasoning", "Action"]
-        self.data = [0] * num_modules
+    def __init__(self):
+        self.module_names = ["Perception", "Attention", "Memory", "Reasoning", "Action", "System State"]
+        self.data = {name: (0, 0) for name in self.module_names}  # (value, shape)
         self.max_width = 50  # Maximum width of the bar
 
-    def update_data(self, module_index, new_data):
-        self.data[module_index] = float(new_data)
+    def update(self, new_data):
+        for key, value in new_data.items():
+            if key in self.data:
+                if isinstance(value, (int, float)):
+                    self.data[key] = (value, None)
+                elif hasattr(value, 'shape'):
+                    self.data[key] = (self.calculate_complexity(value.shape), value.shape)
+                else:
+                    self.data[key] = (0, str(value))
+
+    def calculate_complexity(self, shape):
+        # Simple complexity measure: sum of dimensions
+        return sum(shape) / 100  # Normalize to 0-1 range
 
     def generate_bar(self, value):
         filled_width = int(value * self.max_width)
@@ -62,12 +72,14 @@ class TerminalVisualizer:
     def clear_terminal(self):
         os.system('cls' if os.name == 'nt' else 'clear')
 
-    def display(self):
+    def render(self):
         self.clear_terminal()
         print("Quantum-Inspired Cognitive Architecture Visualization")
-        print("=" * 60)
-        for i, name in enumerate(self.module_names):
-            bar = self.generate_bar(self.data[i])
-            print(f"{name:12} {bar} {self.data[i]:.2f}")
-        print("=" * 60)
+        print("=" * 70)
+        for name in self.module_names:
+            value, shape = self.data[name]
+            bar = self.generate_bar(value)
+            shape_str = f"Shape: {shape}" if shape else ""
+            print(f"{name:12} {bar} {value:.2f} {shape_str}")
+        print("=" * 70)
         print(f"Last updated: {time.strftime('%Y-%m-%d %H:%M:%S')}")

@@ -1,35 +1,12 @@
 # cognitive_modules/perception.py
 
-import logging
 from .base_module import BaseCognitiveModule
 import numpy as np
-from quantum_inspired_lib.efficient_quantum_nn import EfficientQuantumNeuralNetwork
 from PIL import Image
-from logger import setup_logger
 
 class PerceptionModule(BaseCognitiveModule):
-    def __init__(self, input_size, conv_params, dim_reduction_size, attention_size, layer_sizes):
-        self.logger = setup_logger(self.__class__.__name__, logging.DEBUG)
-        self.logger.info(f"Initializing PerceptionModule")
-        self.logger.debug(f"with parameters:")
-        self.logger.debug(f"  input_size: {input_size}")
-        self.logger.debug(f"  conv_params: {conv_params}")
-        self.logger.debug(f"  dim_reduction_size: {dim_reduction_size}")
-        self.logger.debug(f"  attention_size: {attention_size}")
-        self.logger.debug(f"  layer_sizes: {layer_sizes}")
-        
-        self.input_size = input_size
-        self.conv_params = conv_params
-        self.dim_reduction_size = dim_reduction_size
-        self.attention_size = attention_size
-        self.layer_sizes = layer_sizes
-        self.qnn = EfficientQuantumNeuralNetwork(
-            input_size=input_size,
-            conv_params=conv_params,
-            dim_reduction_size=dim_reduction_size,
-            attention_size=attention_size,
-            layer_sizes=layer_sizes
-        )
+    def __init__(self, initial_input_size, conv_params, dim_reduction_size, attention_size, layer_sizes):
+        super().__init__(initial_input_size, conv_params, dim_reduction_size, attention_size, layer_sizes)
         self.logger.info("PerceptionModule initialization complete")
     
     async def process(self, input_data):
@@ -55,15 +32,17 @@ class PerceptionModule(BaseCognitiveModule):
             
             self.logger.debug(f"Combined features shape: {combined_features.shape}")
             
+            # Adjust the network for the new input size if necessary
+            if self.qnn.conv_layer.input_size != combined_features.shape[1]:
+                self.qnn.adjust_input_size(combined_features.shape[1])
+            
             # Process through the quantum neural network
             visual_features = self.qnn.forward(combined_features)
             
-            self.logger.debug("PerceptionModule.process completed")
+            self.logger.info("PerceptionModule.process completed")
             return visual_features
         except Exception as e:
-            self.logger.error(f"Error in PerceptionModule.process: {e}")
-            import traceback
-            traceback.print_exc()
+            self.logger.error(f"Error in PerceptionModule.process: {e}", exc_info=True)
             raise
     
     def preprocess_audio(self, audio_data):

@@ -1,24 +1,11 @@
 # cognitive_modules/attention.py
 
-import logging
 from .base_module import BaseCognitiveModule
 import numpy as np
-from logger import setup_logger
 
 class AttentionModule(BaseCognitiveModule):
-    def __init__(self, input_size, conv_params, dim_reduction_size, attention_size, layer_sizes):
-        self.logger = setup_logger(self.__class__.__name__, logging.DEBUG)
-        self.logger.info("Initializing AttentionModule")
-        # Calculate the correct input size for the attention module
-        perception_output_size = layer_sizes[-1]  # Size of the last layer in perception module
-        state_size = 50  # Size of the system state
-        actual_input_size = perception_output_size + state_size
-        
-        # Adjust conv_params for the new input size
-        adjusted_conv_params = conv_params.copy()
-        adjusted_conv_params['kernel_size'] = min(conv_params['kernel_size'], actual_input_size - 1)
-        
-        super().__init__(actual_input_size, adjusted_conv_params, dim_reduction_size, attention_size, layer_sizes)
+    def __init__(self, initial_input_size, conv_params, dim_reduction_size, attention_size, layer_sizes):
+        super().__init__(initial_input_size, conv_params, dim_reduction_size, attention_size, layer_sizes)
         self.logger.info("AttentionModule initialization complete")
 
     async def process(self, features, current_state):
@@ -37,6 +24,10 @@ class AttentionModule(BaseCognitiveModule):
             combined_input = np.concatenate([features, current_state], axis=1)
             self.logger.debug(f"Combined input shape: {combined_input.shape}")
 
+            # Adjust the network for the new input size if necessary
+            if self.qnn.conv_layer.input_size != combined_input.shape[1]:
+                self.qnn.adjust_input_size(combined_input.shape[1])
+
             # Process through the quantum neural network
             attention_output = self.qnn.forward(combined_input)
             self.logger.debug(f"Attention output shape: {attention_output.shape}")
@@ -46,10 +37,8 @@ class AttentionModule(BaseCognitiveModule):
             attended_features = attention_output[:, :split_index]
             attention_weights = attention_output[:, split_index:]
 
-            self.logger.debug("AttentionModule.process completed")
+            self.logger.info("AttentionModule.process completed")
             return attended_features, attention_weights
         except Exception as e:
-            self.logger.error(f"Error in AttentionModule.process: {e}")
-            import traceback
-            traceback.print_exc()
+            self.logger.error(f"Error in AttentionModule.process: {e}", exc_info=True)
             raise

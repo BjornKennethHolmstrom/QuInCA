@@ -14,17 +14,17 @@ class RealTimeFramework:
     def __init__(self):
         self.tasks: Dict[str, Task] = {}
         self.logger = setup_logger('RealTimeFramework')
-        self.logger.debug("RealTimeFramework initialized")
+        self.logger.info("RealTimeFramework initialized")
 
     def add_task(self, coro: Callable, interval: Optional[float] = None, name: str = ""):
         task = Task(coro, interval, name)
         self.tasks[task.name] = task
-        self.logger.debug(f"Task added: {task.name}")
+        self.logger.info(f"Task added: {task.name}")
 
     def remove_task(self, name: str):
         if name in self.tasks:
             del self.tasks[name]
-            self.logger.debug(f"Task removed: {name}")
+            self.logger.info(f"Task removed: {name}")
 
     async def run_task(self, task: Task):
         self.logger.debug(f"Attempting to run task: {task.name}")
@@ -48,7 +48,7 @@ class RealTimeFramework:
             await asyncio.sleep(max(0, task.interval - (asyncio.get_event_loop().time() - task.last_run)))
 
     async def main_loop(self):
-        self.logger.debug("Entering main loop")
+        self.logger.info("Entering main loop")
         while True:
             tasks = []
             for task in self.tasks.values():
@@ -63,7 +63,7 @@ class RealTimeFramework:
                 await asyncio.sleep(0.1)  # Avoid busy-waiting
 
     async def run(self):
-        self.logger.debug("Starting framework run")
+        self.logger.info("Starting framework run")
         try:
             await self.main_loop()
         except asyncio.CancelledError:
@@ -71,7 +71,7 @@ class RealTimeFramework:
         except Exception as e:
             self.logger.error(f"An error occurred in the framework: {e}", exc_info=True)
         finally:
-            self.logger.debug("Framework run complete")
+            self.logger.info("Framework run complete")
 
 # Example usage
 async def periodic_task():
