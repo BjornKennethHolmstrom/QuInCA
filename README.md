@@ -1,4 +1,4 @@
-# Quantum-Inspired Cognitive Architecture
+# QuInCA: Quantum-Inspired Cognitive Architecture - v 0.1.0
 
 This project implements a quantum-inspired cognitive architecture using Python. It aims to model complex cognitive processes using quantum-inspired algorithms to investigate the emergence of consciousness or intelligence as a complex system phenomenon.
 
