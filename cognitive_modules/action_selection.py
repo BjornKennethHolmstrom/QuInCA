@@ -34,7 +34,9 @@ class ActionSelectionModule(BaseCognitiveModule):
                 print("Adjusting ConvolutionalLayer and DimensionalityReduction layer")
                 new_conv_params = self.qnn.conv_layer.__dict__.copy()
                 new_conv_params['input_size'] = combined_input.shape[1]
-                self.qnn.conv_layer = ConvolutionalLayer(**new_conv_params)
+                if 'kernels' in new_conv_params:
+                    del new_conv_params['kernels']
+                self.qnn.conv_layer = ConvolutionalLayer(**new_conv_params)                
                 conv_output_size = self.qnn.conv_layer.num_filters * (combined_input.shape[1] - new_conv_params['kernel_size'] + 1)
                 self.qnn.dim_reduction = DimensionalityReduction(conv_output_size, self.qnn.dim_reduction.output_size)
 
