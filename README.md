@@ -5,6 +5,9 @@ This project implements a quantum-inspired cognitive architecture using Python. 
 ## Features
 
 - Quantum-inspired neural networks
+  - Basic version
+  - Efficient version
+  - Flexible version (current)
 - Modular cognitive architecture including:
   - Perception Module
   - Attention Module
@@ -13,6 +16,7 @@ This project implements a quantum-inspired cognitive architecture using Python. 
   - Action Selection Module
 - Real-time processing framework
 - Multi-modal input system (audio, keyboard, mouse, screenshot)
+- Extensive printing with logging levels
 
 ## Requirements
 
