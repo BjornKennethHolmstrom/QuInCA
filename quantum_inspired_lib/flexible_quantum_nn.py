@@ -1,24 +1,19 @@
+from .unified_quantum_nn import UnifiedQuantumNeuralNetwork
 import numpy as np
 from logger import setup_logger
 import logging
 
-class FlexibleQuantumNeuralNetwork:
-    def __init__(self, initial_input_size, conv_params, dim_reduction_size, attention_size, layer_sizes):
-        self.logger = setup_logger(self.__class__.__name__, logging.WARNING)
+class FlexibleQuantumNeuralNetwork(UnifiedQuantumNeuralNetwork):
+    def __init__(self, initial_input_size, conv_params, dim_reduction_size, attention_size, layer_sizes, entanglement_strength=0.1):
+        super().__init__([dim_reduction_size] + layer_sizes, entanglement_strength)
+        self.logger = setup_logger(self.__class__.__name__, logging.INFO)
         self.conv_params = conv_params
         self.dim_reduction_size = dim_reduction_size
         self.attention_size = attention_size
-        self.layer_sizes = layer_sizes
         
         self.conv_layer = FlexibleConvolutionalLayer(initial_input_size, **conv_params)
         self.dim_reduction = FlexibleDimensionalityReduction(self.conv_layer.output_size, dim_reduction_size)
         self.attention = FlexibleAttentionMechanism(dim_reduction_size, attention_size)
-        
-        self.quantum_layers = []
-        current_size = attention_size
-        for size in layer_sizes:
-            self.quantum_layers.append(FlexibleQuantumLayer(current_size, size))
-            current_size = size
     
     def forward(self, inputs):
         self.logger.debug(f"Forward pass, input shape: {inputs.shape}")
@@ -27,18 +22,12 @@ class FlexibleQuantumNeuralNetwork:
         x = x.reshape(x.shape[0], -1)  # Flatten the output
         self.logger.debug(f"After reshaping, shape: {x.shape}")
         
-        # Adjust dimensionality reduction if needed
-        if x.shape[1] != self.dim_reduction.input_size:
-            self.dim_reduction.adjust_input_size(x.shape[1])
-        
         x = self.dim_reduction.forward(x)
         self.logger.debug(f"After dim reduction, shape: {x.shape}")
         x = self.attention.forward(x)
         self.logger.debug(f"After attention, shape: {x.shape}")
-        for i, layer in enumerate(self.quantum_layers):
-            x = layer.forward(x)
-            self.logger.debug(f"After quantum layer {i+1}, shape: {x.shape}")
-        return x
+        
+        return super().forward(x.reshape(1, -1))  # Ensure input is 2D for quantum layers
     
     def adjust_input_size(self, new_input_size):
         self.logger.info(f"Adjusting network for new input size: {new_input_size}")
