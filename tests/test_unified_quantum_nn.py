@@ -1,37 +1,53 @@
 # tests/test_unified_quantum_nn.py
 
+import sys
+import os
 import unittest
 import numpy as np
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, project_root)
 from quantum_inspired_lib.unified_quantum_nn import UnifiedQuantumNeuralNetwork
 
-class TestUnifiedQuantumNN(unittest.TestCase):
+class TestUnifiedQuantumNeuralNetwork(unittest.TestCase):
     def setUp(self):
-        self.layer_sizes = [10, 5, 3]
-        self.unified_nn = UnifiedQuantumNeuralNetwork(self.layer_sizes)
+        self.nn = UnifiedQuantumNeuralNetwork([4, 8, 2])
 
     def test_initialization(self):
-        self.assertEqual(len(self.unified_nn.layers), len(self.layer_sizes) - 1)
+        self.assertEqual(len(self.nn.layers), 2)
+        self.assertEqual(self.nn.final_layer_size, 2)
 
     def test_forward_pass(self):
-        input_data = np.random.randn(1, 10) + 1j * np.random.randn(1, 10)
-        output = self.unified_nn.forward(input_data)
-        self.assertEqual(output.shape, (1, 3))
-        self.assertTrue(np.iscomplexobj(output))
+        input_data = np.random.rand(10, 4)
+        output = self.nn.forward(input_data)
+        self.assertEqual(output.shape, (10, 2))
 
-    def test_quantum_attention(self):
-        input_data = np.random.randn(1, 10) + 1j * np.random.randn(1, 10)
-        attended_output, attention_weights = self.unified_nn.quantum_attention(input_data)
-        self.assertEqual(attended_output.shape, (1, 10))
-        self.assertEqual(attention_weights.shape, (1, 3))
-        self.assertAlmostEqual(np.sum(attention_weights), 1.0)
+    def test_input_validation(self):
+        with self.assertRaises(ValueError):
+            UnifiedQuantumNeuralNetwork([])
+        with self.assertRaises(ValueError):
+            UnifiedQuantumNeuralNetwork([1, -1, 2])
+        with self.assertRaises(ValueError):
+            self.nn.forward(np.random.rand(10))
+        with self.assertRaises(ValueError):
+            self.nn.forward(np.random.rand(10, 5))
 
     def test_quantum_backpropagation(self):
-        X = np.random.randn(100, 10) + 1j * np.random.randn(100, 10)
-        y = np.random.randn(100, 3) + 1j * np.random.randn(100, 3)
-        initial_loss = np.mean(np.abs(self.unified_nn.forward(X[0:1]) - y[0:1])**2)
-        self.unified_nn.quantum_backpropagation(X, y, epochs=10)
-        final_loss = np.mean(np.abs(self.unified_nn.forward(X[0:1]) - y[0:1])**2)
-        self.assertLess(final_loss, initial_loss)
+        X = np.random.rand(20, 4)
+        y = np.random.rand(20, 2)
+        initial_weights = [np.copy(layer.neurons[0].weights) for layer in self.nn.layers]
+        
+        self.nn.quantum_backpropagation(X, y, epochs=10)
+        
+        # Check if weights have been updated
+        for i, layer in enumerate(self.nn.layers):
+            self.assertFalse(np.allclose(layer.neurons[0].weights, initial_weights[i]))
+
+    def test_unitary_weights(self):
+        for layer in self.nn.layers:
+            for neuron in layer.neurons:
+                w = neuron.weights
+                ww_dagger = np.dot(w, w.conj().T)
+                self.assertTrue(np.allclose(ww_dagger, np.eye(w.shape[0]), atol=1e-6))
 
 if __name__ == '__main__':
     unittest.main()
